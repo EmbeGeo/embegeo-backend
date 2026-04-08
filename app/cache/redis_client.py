@@ -1,0 +1,60 @@
+from typing import Optional
+
+import aioredis
+
+from app.config import settings
+
+
+class RedisClient:
+    _instance: Optional["RedisClient"] = None
+    _redis: Optional[aioredis.Redis] = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    async def connect(self):
+        if self._redis is None:
+            try:
+                self._redis = aioredis.from_url(
+                    settings.REDIS_URL, decode_responses=True
+                )
+                await self._redis.ping()
+                print("Redis connected successfully!")
+            except aioredis.exceptions.ConnectionError as e:
+                print(f"Could not connect to Redis: {e}")
+                self._redis = None  # Ensure _redis is None if connection fails
+
+    async def disconnect(self):
+        if self._redis:
+            await self._redis.close()
+            self._redis = None
+            print("Redis disconnected.")
+
+    async def get(self, key: str) -> Optional[str]:
+        if not self._redis:
+            await self.connect()  # Attempt to reconnect if not connected
+            if not self._redis:
+                return None  # If reconnect fails, return None
+
+        return await self._redis.get(key)
+
+    async def set(self, key: str, value: str, ex: Optional[int] = None):
+        if not self._redis:
+            await self.connect()  # Attempt to reconnect if not connected
+            if not self._redis:
+                return  # If reconnect fails, do nothing
+
+        await self._redis.set(key, value, ex=ex)
+
+    async def delete(self, key: str):
+        if not self._redis:
+            await self.connect()  # Attempt to reconnect if not connected
+            if not self._redis:
+                return  # If reconnect fails, do nothing
+
+        await self._redis.delete(key)
+
+
+redis_client = RedisClient()
