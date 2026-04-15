@@ -1,13 +1,13 @@
 from typing import Optional
 
-import aioredis
+import redis.asyncio as redis
 
 from app.config import settings
 
 
 class RedisClient:
     _instance: Optional["RedisClient"] = None
-    _redis: Optional[aioredis.Redis] = None
+    _redis: Optional[redis.Redis] = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -17,12 +17,12 @@ class RedisClient:
     async def connect(self):
         if self._redis is None:
             try:
-                self._redis = aioredis.from_url(
+                self._redis = redis.from_url(
                     settings.REDIS_URL, decode_responses=True
                 )
                 await self._redis.ping()
                 print("Redis connected successfully!")
-            except aioredis.exceptions.ConnectionError as e:
+            except redis.ConnectionError as e:
                 print(f"Could not connect to Redis: {e}")
                 self._redis = None  # Ensure _redis is None if connection fails
 

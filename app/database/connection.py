@@ -1,6 +1,5 @@
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
                                     create_async_engine)
-from sqlalchemy.pool import QueuePool
 
 from app.config import settings
 
@@ -16,7 +15,6 @@ async_engine = create_async_engine(
     max_overflow=20,  # Max connections that can be opened beyond pool_size
     pool_timeout=30,  # seconds to wait for a connection
     pool_recycle=3600,  # recycle connections after an hour
-    poolclass=QueuePool,
     connect_args={"connect_timeout": 10},  # Timeout for initial connection
 )
 

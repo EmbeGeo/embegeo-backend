@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import text
+
 from app.cache.redis_client import redis_client
 from app.database.connection import async_engine
 from app.schemas.common import BaseResponse

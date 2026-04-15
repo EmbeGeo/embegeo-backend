@@ -1,10 +1,21 @@
+from app.schemas.sensor_data import SensorDataCreate
+
+
 class ValidationService:
     @staticmethod
-    def is_valid_confidence_score(score: float) -> bool:
-        """Checks if the confidence score is within a valid range (0.0 to 1.0)."""
-        return 0.0 <= score <= 1.0
+    def validate_sensor_data(data: SensorDataCreate) -> None:
+        """
+        센서 데이터 유효성 검사.
+        현재는 기본 타입 검사만 수행 (Pydantic이 처리).
+        추후 정상 범위 검사 로직 추가 예정.
+        """
+        pass
 
     @staticmethod
-    def is_valid_camera_id(camera_id: int) -> bool:
-        """Checks if the camera_id is positive."""
-        return camera_id > 0
+    def is_out_of_range(data: SensorDataCreate) -> bool:
+        """
+        센서값 비정상 범위 여부 확인.
+        추후 각 필드의 정상 범위 기준 추가 예정.
+        """
+        # TODO: 범위 기준 추가 예정
+        return False

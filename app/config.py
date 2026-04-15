@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "mysql+pymysql://easygeo:password123@localhost:3306/easygeo"
+    DATABASE_URL: str = "mysql+aiomysql://easygeo:password123@localhost:3306/easygeo"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
