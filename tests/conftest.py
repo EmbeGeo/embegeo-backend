@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -14,8 +15,10 @@ from app.dependencies import get_db
 from app.main import app
 from app.models.base import Base  # Import Base for metadata
 
-# Override DATABASE_URL for testing
-TEST_DATABASE_URL = "mysql+aiomysql://testuser:testpassword@localhost:3306/test_easygeo"  # Use aiomysql for async MySQL
+# Override DATABASE_URL for testing — set TEST_DATABASE_URL in .env or environment
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
+if not TEST_DATABASE_URL:
+    raise RuntimeError("TEST_DATABASE_URL 환경변수가 설정되지 않았습니다. .env.example을 참고하여 .env에 추가하세요.")
 
 # Create a test engine and session local
 test_async_engine = create_async_engine(

@@ -25,9 +25,8 @@ async def health_check():
         async with async_engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
             db_status = "connected"
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        db_status = f"error: {e}"
+    except Exception:
+        db_status = "error"
 
     try:
         # Check Redis connection
@@ -35,14 +34,10 @@ async def health_check():
             await redis_client._redis.ping()
             redis_status = "connected"
         else:
-            await redis_client.connect()  # Attempt to connect if not already
-            if redis_client._redis:
-                redis_status = "connected"
-            else:
-                redis_status = "error: Redis client not initialized or connected"
-    except Exception as e:
-        print(f"Redis connection error: {e}")
-        redis_status = f"error: {e}"
+            await redis_client.connect()
+            redis_status = "connected" if redis_client._redis else "error"
+    except Exception:
+        redis_status = "error"
 
     if db_status == "connected" and redis_status == "connected":
         return BaseResponse(

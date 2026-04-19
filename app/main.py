@@ -1,7 +1,7 @@
 from typing import Any, Callable
 
 import uvicorn
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,6 +10,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from app.cache.redis_client import redis_client
 from app.config import settings
 from app.database.connection import async_engine
+from app.dependencies import verify_api_key
 from app.models.base import Base
 from app.routes import health
 from app.routes import sensor_data, statistics
@@ -50,7 +51,7 @@ app = CustomFastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,8 +80,18 @@ async def shutdown_event():
 
 # API 라우트 등록 (prefix: /api/v1)
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(sensor_data.router, prefix="/api/v1", tags=["Sensor Data"])
-app.include_router(statistics.router, prefix="/api/v1", tags=["Statistics"])
+app.include_router(
+    sensor_data.router,
+    prefix="/api/v1",
+    tags=["Sensor Data"],
+    dependencies=[Depends(verify_api_key)],
+)
+app.include_router(
+    statistics.router,
+    prefix="/api/v1",
+    tags=["Statistics"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 # WebSocket
 app.include_router(websocket_handlers.router)

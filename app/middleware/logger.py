@@ -5,19 +5,25 @@ from starlette.requests import Request
 
 from app.utils.logger import logger
 
+_SENSITIVE_HEADERS = {"authorization", "x-api-key", "cookie", "set-cookie"}
+
+
+def _filter_headers(headers: dict) -> dict:
+    return {k: ("***" if k.lower() in _SENSITIVE_HEADERS else v) for k, v in headers.items()}
+
 
 class RequestLoggerMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = time.time()
 
-        # Log request details
+        # Log request details (sensitive headers masked)
         logger.info(
             f"Request: {request.method} {request.url.path}",
             extra={
                 "request_method": request.method,
                 "request_path": request.url.path,
                 "request_client_host": request.client.host,
-                "request_headers": dict(request.headers),
+                "request_headers": _filter_headers(dict(request.headers)),
             },
         )
 

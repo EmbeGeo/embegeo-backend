@@ -32,10 +32,10 @@ async def create_sensor_data(
             "message": "센서 데이터가 저장되었습니다",
             "timestamp": saved.timestamp,
         }
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"센서 데이터 저장 실패: {e}",
+            detail="센서 데이터 저장에 실패했습니다",
         )
 
 
