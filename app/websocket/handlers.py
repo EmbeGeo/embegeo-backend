@@ -1,8 +1,11 @@
+import logging
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.websocket.manager import websocket_manager
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.websocket("/ws/live")
@@ -14,15 +17,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket_manager.connect(websocket)
     try:
         while True:
-            # Keep the connection alive, await for messages (though none expected from client in this case)
-            # This can be used to handle incoming messages from clients if needed
             message = await websocket.receive_text()
-            print(
-                f"Received message from client: {message}"
-            )  # For debugging, can be removed
+            logger.debug(f"Received message from client: {message}")
     except WebSocketDisconnect:
         websocket_manager.disconnect(websocket)
-        print(f"Client disconnected from WebSocket.")
+        logger.info("Client disconnected from WebSocket")
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
         websocket_manager.disconnect(websocket)

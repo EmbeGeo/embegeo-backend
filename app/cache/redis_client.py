@@ -1,8 +1,11 @@
+import logging
 from typing import Optional
 
 import redis.asyncio as redis
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class RedisClient:
@@ -21,16 +24,16 @@ class RedisClient:
                     settings.REDIS_URL, decode_responses=True
                 )
                 await self._redis.ping()
-                print("Redis connected successfully!")
+                logger.info("Redis connected successfully")
             except redis.ConnectionError as e:
-                print(f"Could not connect to Redis: {e}")
-                self._redis = None  # Ensure _redis is None if connection fails
+                logger.error(f"Could not connect to Redis: {e}")
+                self._redis = None
 
     async def disconnect(self):
         if self._redis:
             await self._redis.close()
             self._redis = None
-            print("Redis disconnected.")
+            logger.info("Redis disconnected")
 
     async def get(self, key: str) -> Optional[str]:
         if not self._redis:
