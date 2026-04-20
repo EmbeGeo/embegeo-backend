@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Optional
 
@@ -5,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
+
+logger = logging.getLogger(__name__)
 from app.schemas.common import BaseResponse
 from app.schemas.sensor_data import (SensorDataCreate, SensorDataRangeResponse,
                                       SensorDataResponse)
@@ -32,7 +35,8 @@ async def create_sensor_data(
             "message": "센서 데이터가 저장되었습니다",
             "timestamp": saved.timestamp,
         }
-    except Exception:
+    except Exception as e:
+        logger.error(f"센서 데이터 저장 실패: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="센서 데이터 저장에 실패했습니다",

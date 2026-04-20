@@ -11,6 +11,7 @@ from app.cache.redis_client import redis_client
 from app.config import settings
 from app.database.connection import async_engine
 from app.dependencies import verify_api_key
+from app.utils.logger import logger
 from app.models.base import Base
 from app.routes import health
 from app.routes import sensor_data, statistics
@@ -62,20 +63,20 @@ app.add_exception_handler(FastAPIHTTPException, http_exception_handler)
 
 @app.on_event("startup")
 async def startup_event():
-    print("Application startup...")
+    logger.info("Application startup")
     await redis_client.connect()
-    print("Redis client initialized.")
+    logger.info("Redis client initialized")
 
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("Database tables checked/created.")
+    logger.info("Database tables checked/created")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("Application shutdown...")
+    logger.info("Application shutdown")
     await redis_client.disconnect()
-    print("Redis client disconnected.")
+    logger.info("Redis client disconnected")
 
 
 # API 라우트 등록 (prefix: /api/v1)
