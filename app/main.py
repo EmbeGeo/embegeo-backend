@@ -1,10 +1,12 @@
+from pathlib import Path
 from typing import Any, Callable
 
 import uvicorn
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from app.cache.redis_client import redis_client
@@ -96,6 +98,20 @@ app.include_router(
 
 # WebSocket
 app.include_router(websocket_handlers.router)
+
+# 프론트엔드 정적 파일 서빙
+FRONTEND_DIST = Path(__file__).parent.parent.parent / "embegeo-frontend" / "dist"
+
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+    @app.get("/favicon.svg")
+    async def favicon():
+        return FileResponse(FRONTEND_DIST / "favicon.svg")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        return FileResponse(FRONTEND_DIST / "index.html")
 
 if __name__ == "__main__":
     uvicorn.run(
