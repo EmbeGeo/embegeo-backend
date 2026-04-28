@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.error_log import ErrorLog
 from app.models.sensor_data import SensorData
-from app.schemas.sensor_data import (SensorDataCreate, SensorDataRangeResponse,
-                                      SensorDataResponse)
+from app.schemas.sensor_data import (OCRDataIngest, SensorDataCreate,
+                                      SensorDataRangeResponse, SensorDataResponse)
 from app.services.cache_service import CacheService
 from app.services.validation_service import ValidationService
 from app.websocket.manager import websocket_manager
@@ -28,27 +28,33 @@ class SensorService:
             await self.db.refresh(sensor_data)
         except Exception as e:
             await self.db.rollback()
-            # DB 저장 실패 시 error_logs 기록
-            await self._log_error(
-                sensor_data_id=None,
-                error_type="DB_SAVE_ERROR",
-                error_message=str(e),
-            )
+            await self._log_error(field="unknown", error_type="PARSE_FAIL", error_detail=str(e))
             raise
-
-        # 센서값 비정상 범위 체크 후 error_logs 기록
-        if ValidationService.is_out_of_range(data):
-            await self._log_error(
-                sensor_data_id=sensor_data.id,
-                error_type="OUT_OF_RANGE",
-                error_message="센서값이 정상 범위를 벗어났습니다.",
-            )
 
         # Redis 캐싱
         response = SensorDataResponse.model_validate(sensor_data)
         await self.cache_service.cache_latest_sensor_data(response)
 
         # WebSocket 브로드캐스트
+        await websocket_manager.broadcast(response.model_dump_json())
+
+        return sensor_data
+
+    async def save_ocr_data(self, data: OCRDataIngest) -> SensorData:
+        """OCR 결과 데이터 저장 후 캐싱 및 WebSocket 브로드캐스트."""
+        sensor_data = SensorData(**data.to_sensor_data_dict())
+        self.db.add(sensor_data)
+
+        try:
+            await self.db.commit()
+            await self.db.refresh(sensor_data)
+        except Exception as e:
+            await self.db.rollback()
+            await self._log_error(field="unknown", error_type="PARSE_FAIL", error_detail=str(e))
+            raise
+
+        response = SensorDataResponse.model_validate(sensor_data)
+        await self.cache_service.cache_latest_sensor_data(response)
         await websocket_manager.broadcast(response.model_dump_json())
 
         return sensor_data
@@ -61,7 +67,7 @@ class SensorService:
             return cached
 
         # DB에서 최신 데이터 조회
-        query = select(SensorData).order_by(SensorData.id.desc()).limit(1)
+        query = select(SensorData).order_by(SensorData.recorded_at.desc()).limit(1)
         result = await self.db.execute(query)
         sensor_data = result.scalars().first()
 
@@ -83,8 +89,8 @@ class SensorService:
         """시간 범위로 센서 데이터 조회."""
         # 전체 건수
         count_query = select(func.count(SensorData.id)).where(
-            SensorData.timestamp >= start_time,
-            SensorData.timestamp <= end_time,
+            SensorData.recorded_at >= start_time,
+            SensorData.recorded_at <= end_time,
         )
         total_result = await self.db.execute(count_query)
         total = total_result.scalar_one()
@@ -93,10 +99,10 @@ class SensorService:
         query = (
             select(SensorData)
             .where(
-                SensorData.timestamp >= start_time,
-                SensorData.timestamp <= end_time,
+                SensorData.recorded_at >= start_time,
+                SensorData.recorded_at <= end_time,
             )
-            .order_by(SensorData.timestamp.asc())
+            .order_by(SensorData.recorded_at.asc())
             .offset(offset)
             .limit(limit)
         )
@@ -112,16 +118,16 @@ class SensorService:
 
     async def _log_error(
         self,
-        sensor_data_id: Optional[int],
+        field: str,
         error_type: str,
-        error_message: str,
+        error_detail: Optional[str] = None,
     ):
-        """error_logs 테이블에 에러 기록."""
+        """ocr_errors 테이블에 에러 기록."""
         try:
             error_log = ErrorLog(
-                sensor_data_id=sensor_data_id,
+                field=field,
                 error_type=error_type,
-                error_message=error_message,
+                error_detail=error_detail,
             )
             self.db.add(error_log)
             await self.db.commit()

@@ -36,16 +36,14 @@ class StatisticsService:
 
         query = select(
             func.count(SensorData.id).label("data_points"),
-            func.max(SensorData.total_count).label("total_count"),
-            func.max(SensorData.error_count).label("error_count"),
             func.avg(SensorData.iso_temp_pv).label("avg_iso_temp_pv"),
             func.avg(SensorData.pol1_temp_pv).label("avg_pol1_temp_pv"),
             func.avg(SensorData.pol2_temp_pv).label("avg_pol2_temp_pv"),
             func.max(SensorData.iso_press).label("max_iso_press"),
             func.min(SensorData.iso_press).label("min_iso_press"),
         ).where(
-            SensorData.timestamp >= start_dt,
-            SensorData.timestamp <= end_dt,
+            SensorData.recorded_at >= start_dt,
+            SensorData.recorded_at <= end_dt,
         )
 
         result = await self.db.execute(query)
@@ -61,8 +59,8 @@ class StatisticsService:
         stats = existing.scalars().first()
 
         if stats:
-            stats.total_count = row.total_count or 0
-            stats.error_count = row.error_count or 0
+            stats.total_count = row.data_points or 0
+            stats.error_count = 0
             stats.avg_iso_temp_pv = row.avg_iso_temp_pv
             stats.avg_pol1_temp_pv = row.avg_pol1_temp_pv
             stats.avg_pol2_temp_pv = row.avg_pol2_temp_pv
@@ -71,8 +69,8 @@ class StatisticsService:
         else:
             stats = Statistics(
                 stat_date=stat_date,
-                total_count=row.total_count or 0,
-                error_count=row.error_count or 0,
+                total_count=row.data_points or 0,
+                error_count=0,
                 avg_iso_temp_pv=row.avg_iso_temp_pv,
                 avg_pol1_temp_pv=row.avg_pol1_temp_pv,
                 avg_pol2_temp_pv=row.avg_pol2_temp_pv,

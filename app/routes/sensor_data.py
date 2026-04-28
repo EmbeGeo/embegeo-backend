@@ -9,8 +9,8 @@ from app.dependencies import get_db
 
 logger = logging.getLogger(__name__)
 from app.schemas.common import BaseResponse
-from app.schemas.sensor_data import (SensorDataCreate, SensorDataRangeResponse,
-                                      SensorDataResponse)
+from app.schemas.sensor_data import (OCRDataIngest, SensorDataCreate,
+                                      SensorDataRangeResponse, SensorDataResponse)
 from app.services.sensor_service import SensorService
 
 router = APIRouter()
@@ -33,13 +33,40 @@ async def create_sensor_data(
             "id": saved.id,
             "status": "created",
             "message": "센서 데이터가 저장되었습니다",
-            "timestamp": saved.timestamp,
+            "recorded_at": saved.recorded_at,
         }
     except Exception as e:
         logger.error(f"센서 데이터 저장 실패: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="센서 데이터 저장에 실패했습니다",
+        )
+
+
+@router.post(
+    "/ingest",
+    status_code=status.HTTP_201_CREATED,
+    summary="OCR 결과 수신 및 저장",
+)
+async def ingest_ocr_data(
+    data: OCRDataIngest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Vision 모듈 OCR 결과 수신 후 저장, 캐싱, WebSocket 브로드캐스트."""
+    try:
+        sensor_service = SensorService(db)
+        saved = await sensor_service.save_ocr_data(data)
+        return {
+            "id": saved.id,
+            "status": "created",
+            "message": "OCR 데이터가 저장되었습니다",
+            "recorded_at": saved.recorded_at,
+        }
+    except Exception as e:
+        logger.error(f"OCR 데이터 저장 실패: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OCR 데이터 저장에 실패했습니다",
         )
 
 
